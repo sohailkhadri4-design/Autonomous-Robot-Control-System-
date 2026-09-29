@@ -1,120 +1,148 @@
 # Autonomous Robot Control System
 
-![Python](https://img.shields.io/badge/Python-3.11-blue)
-![Raspberry Pi](https://img.shields.io/badge/Platform-Raspberry%20Pi-red)
-![Tests](https://img.shields.io/badge/Tests-pytest-orange)
-![CI](https://github.com/sohailkhadri4-design/Autonomous-Robot-Control-System-/actions/workflows/tests.yml/badge.svg)
+[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
+[![CI](https://github.com/sohailkhadri4-design/Autonomous-Robot-Control-System-/actions/workflows/tests.yml/badge.svg)](https://github.com/sohailkhadri4-design/Autonomous-Robot-Control-System-/actions/workflows/tests.yml)
 
-Python-based real-time robot control software using Raspberry Pi GPIO, a five-state control model, PWM, and dual-motor control.
+A Python-based real-time robot control project using Raspberry Pi GPIO, motor-driver control, and a deterministic five-state motion controller.
 
 ## Project Overview
 
-The controller converts high-level operating states into deterministic motor direction and PWM commands.
+This project demonstrates the software control layer between a Raspberry Pi, GPIO interfaces, a motor driver, and a two-motor robot platform.
 
-### Five operating states
+The controller implements five operating states:
 
-1. **IDLE** - motors stopped
-2. **FORWARD** - both motors drive forward
-3. **REVERSE** - both motors drive in reverse
-4. **TURN_LEFT** - differential motor action for a left turn
-5. **TURN_RIGHT** - differential motor action for a right turn
+- **IDLE**: both motors stopped
+- **FORWARD**: both motors drive forward
+- **REVERSE**: both motors drive in reverse
+- **TURN_LEFT**: left motor reverses while the right motor moves forward
+- **TURN_RIGHT**: left motor moves forward while the right motor reverses
 
-## Architecture
+The design separates high-level state logic from low-level GPIO access so the control software can be developed and tested without requiring a Raspberry Pi in CI.
+
+## Key Features
+
+- Five-state deterministic robot control
+- Dual DC motor direction control
+- PWM-based motor speed control from 0 to 100%
+- Raspberry Pi GPIO adapter using `RPi.GPIO`
+- Simulated GPIO backend for development and automated tests
+- Safe-stop behavior through the IDLE state
+- Unit and integration tests with pytest
+- GitHub Actions continuous integration
+- System architecture and operating-state documentation
+
+## System Architecture
 
 ![System Architecture](docs/system_architecture.svg)
 
-The design separates control logic from GPIO hardware access. A simulated GPIO backend supports development and CI, while an optional Raspberry Pi GPIO adapter provides the hardware integration layer.
+**Control command → State Machine → Robot Controller → Motor Controller → GPIO Interface → Motor Driver → Motors**
+
+See [system architecture](docs/system_architecture.md) for details.
 
 ## Repository Structure
 
 ```text
-src/
-├── control/
-│   ├── state_machine.py
-│   └── robot_controller.py
-├── gpio/
-│   └── gpio_interface.py
-└── motors/
-    └── motor_controller.py
-
-tests/
-├── test_state_machine.py
-├── test_motor_control.py
-└── test_integration.py
-
-examples/
-└── run_robot_controller.py
-
-docs/
-├── operating_states.md
-├── system_architecture.md
-└── system_architecture.svg
-
-.github/workflows/
-└── tests.yml
+Autonomous-Robot-Control-System-/
+├── README.md
+├── requirements.txt
+├── LICENSE
+├── .gitignore
+├── .github/workflows/tests.yml
+├── src/
+│   ├── control/
+│   │   ├── robot_controller.py
+│   │   └── state_machine.py
+│   ├── gpio/gpio_interface.py
+│   └── motors/motor_controller.py
+├── examples/run_robot_controller.py
+├── tests/
+│   ├── test_state_machine.py
+│   ├── test_motor_control.py
+│   └── test_integration.py
+└── docs/
+    ├── operating_states.md
+    ├── system_architecture.md
+    └── system_architecture.svg
 ```
 
-## Key Design Points
+## Setup
 
-- Deterministic five-state control model.
-- Separation between high-level control and low-level motor control.
-- GPIO abstraction for simulation and Raspberry Pi integration.
-- PWM duty-cycle validation from 0 to 100 percent.
-- Automated tests for state transitions, motor direction, PWM behavior, and integration.
-- Safe startup behavior places the robot in **IDLE**.
+Create a virtual environment and install the development dependencies.
 
-## Run Tests
+Windows:
+
+```bash
+python -m venv .venv
+.venv\\Scripts\\activate
+```
+
+Linux/Raspberry Pi:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
-pytest -q
 ```
 
-## Run the Example
+Then:
 
-The example uses `SimulatedGPIO`, so it does not require a Raspberry Pi or connected motors.
+```bash
+pip install -r requirements.txt
+```
+
+## Run the Simulation
+
+The included example uses the simulated GPIO backend, so it does not require physical hardware:
 
 ```bash
 python examples/run_robot_controller.py
 ```
 
+## Run Tests
+
+```bash
+pytest -q
+```
+
+GitHub Actions runs the test suite automatically for pushes and pull requests targeting `main`.
+
 ## Raspberry Pi Hardware Integration
 
-The repository includes a `RaspberryPiGPIO` adapter around `RPi.GPIO`.
+The hardware adapter is implemented in `src/gpio/gpio_interface.py` using `RPi.GPIO`.
 
-Before physical operation:
+Before connecting a real robot:
 
-1. Install a Raspberry Pi-compatible `RPi.GPIO` package.
-2. Set `MotorPins` to match the actual motor-driver wiring.
-3. Verify the motor driver and power supply.
-4. Test with the robot lifted from the ground.
-5. Document the actual pin mapping and hardware test results.
+1. Install the Raspberry Pi GPIO library appropriate for your Raspberry Pi OS/Python environment.
+2. Select GPIO pins based on your actual motor-driver wiring.
+3. Pass those pins through the `MotorPins` configuration.
+4. Verify motor-driver logic levels and power wiring against the driver's datasheet.
+5. Test with the wheels lifted from the ground before normal operation.
 
-The pin numbers in the example are for the simulated backend and are **not** a verified physical wiring diagram.
+The pin numbers shown in the simulation example are **example values only** and are not presented as your actual hardware wiring.
 
-## Testing and CI
+## Testing Approach
 
-GitHub Actions runs the Python test suite on pushes and pull requests to `main`.
+The automated tests cover:
 
-The repository is intentionally structured so the core control logic can be tested without physical robot hardware.
+- State initialization and transitions
+- All five operating states
+- Forward and reverse motor direction logic
+- Left and right turning logic
+- PWM speed limits
+- Stop behavior
+- State-to-motor integration
 
-## Hardware Validation Note
+The CI tests use `SimulatedGPIO`, making the software control path deterministic and hardware-independent.
 
-This repository is a hardware-ready reference implementation with a deterministic simulated GPIO backend. Physical Raspberry Pi and motor validation should only be documented after those tests have actually been performed.
+## Project Scope
 
-## Skills Demonstrated
+The repository focuses on the robot control and motor-interface layer. It does not claim autonomous navigation, obstacle avoidance, localization, or sensor-based path planning unless those features are added and documented separately.
 
-**Python | Raspberry Pi | GPIO | Motor Control | State Machines | PWM | Robotics Software Testing | GitHub Actions**
+This repository contains a reference implementation for the described control architecture. Physical robot validation should be documented with the actual hardware configuration and test results.
 
 ## Author
 
 **Syed Sohel Khadri**
 
-GitHub: https://github.com/sohailkhadri4-design  
-LinkedIn: https://www.linkedin.com/in/syed-sohel-khadri-7b570b381/
+Embedded Firmware | STM32 | ARM Cortex-M | Embedded C
 
-## License
-
-MIT License
+GitHub: https://github.com/sohailkhadri4-design
